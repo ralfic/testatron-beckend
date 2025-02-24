@@ -1,0 +1,87 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        Int        @id @default(autoincrement())
+    email     String     @unique
+    role      Role       @default(USER)
+    firstName String
+    lastName  String
+    password  String
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    tests     Test[]
+    Response  Response[]
+}
+
+model Test {
+    id          Int        @id @default(autoincrement())
+    title       String     @unique
+    description String?
+    is_test     Boolean    @default(false)
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+    author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId    Int
+    questions   Question[]
+    Response    Response[]
+}
+
+model Question {
+    id          Int          @id @default(autoincrement())
+    text        String
+    type        QuestionType
+    is_required Boolean      @default(false)
+    test        Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId      Int
+    options     Option[]
+    Answer      Answer[]
+}
+
+model Option {
+    id         Int      @id @default(autoincrement())
+    text       String
+    is_correct Boolean  @default(false)
+    question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId Int
+    Answer     Answer[]
+}
+
+model Response {
+    id        Int      @id @default(autoincrement())
+    user      User     @relation(fields: [userId], references: [id])
+    userId    Int
+    test      Test     @relation(fields: [testId], references: [id])
+    testId    Int
+    score     Float?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    Answer    Answer[]
+}
+
+model Answer {
+    id         Int      @id @default(autoincrement())
+    question   Question @relation(fields: [questionId], references: [id])
+    questionId Int
+    option     Option   @relation(fields: [optionId], references: [id])
+    optionId   Int
+    response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+    responseId Int
+}
+
+enum QuestionType {
+    TEXT
+    MULTIPLE
+    SINGLE
+}
+
+enum Role {
+    ADMIN
+    USER
+}
