@@ -17,62 +17,77 @@ model User {
     createdAt DateTime   @default(now())
     updatedAt DateTime   @updatedAt
     tests     Test[]
-    Response  Response[]
+    response  Response[]
+
+    @@map("users")
 }
 
 model Test {
     id          Int        @id @default(autoincrement())
     title       String     @unique
     description String?
-    is_test     Boolean    @default(false)
     createdAt   DateTime   @default(now())
     updatedAt   DateTime   @updatedAt
     author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-    authorId    Int
+    authorId    Int        @map("author_id")
     questions   Question[]
-    Response    Response[]
+    response    Response[]
+
+    @@map("tests")
 }
 
 model Question {
-    id          Int          @id @default(autoincrement())
-    text        String
-    type        QuestionType
-    is_required Boolean      @default(false)
-    test        Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
-    testId      Int
-    options     Option[]
-    Answer      Answer[]
+    id         Int          @id @default(autoincrement())
+    text       String
+    type       QuestionType
+    isRequired Boolean      @default(false) @map("is_required")
+    test       Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId     Int          @map("test_id")
+    options    Option[]
+    answer     Answer[]
+
+    @@map("questions")
 }
 
 model Option {
     id         Int      @id @default(autoincrement())
     text       String
-    is_correct Boolean  @default(false)
+    isCorrect  Boolean  @default(false) @map("is_correct")
     question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-    questionId Int
-    Answer     Answer[]
+    questionId Int      @map("question_id")
+    answer     Answer[]
 }
 
 model Response {
     id        Int      @id @default(autoincrement())
     user      User     @relation(fields: [userId], references: [id])
-    userId    Int
+    userId    Int      @map("user_id")
     test      Test     @relation(fields: [testId], references: [id])
-    testId    Int
+    testId    Int      @map("test_id")
     score     Float?
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    Answer    Answer[]
+    answer    Answer[]
+
+    @@map("responses")
 }
 
 model Answer {
     id         Int      @id @default(autoincrement())
     question   Question @relation(fields: [questionId], references: [id])
-    questionId Int
+    questionId Int      @map("question_id")
     option     Option   @relation(fields: [optionId], references: [id])
-    optionId   Int
+    optionId   Int      @map("option_id")
     response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-    responseId Int
+    responseId Int      @map("response_id")
+}
+
+model UserSession {
+    sid    String   @id
+    sess   Json
+    expire DateTime
+
+    @@map("user_sessions")
 }
 
 enum QuestionType {

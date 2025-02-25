@@ -1,17 +1,13 @@
-import {
-  loginUser,
-  logoutUser,
-  registerUser,
-} from '@/controllers/auth.controller';
+import { login, logout, register } from '@/controllers/auth.controller';
 import { Router } from 'express';
 import passport from 'passport';
 
 const router = Router();
 
-router.post('/api/auth', passport.authenticate('local'), loginUser);
+router.post('/auth', passport.authenticate('local'), login);
 
-router.post('/api/auth/logout', logoutUser);
+router.post('/auth/logout', logout);
 
-router.post('/api/auth/register', registerUser);
+router.post('/auth/register', register);
 
 export default router;

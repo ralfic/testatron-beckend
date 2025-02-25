@@ -1,7 +1,27 @@
-import passport from 'passport';
 import { Strategy } from 'passport-local';
 import { prisma } from '../server';
-import { comparePassword } from '../utils/helpers';
+import passport from 'passport';
+import { comparePassword } from '@/utils/helpers';
+
+passport.use(
+  new Strategy({ usernameField: 'email' }, async (email, password, done) => {
+    try {
+      const user = await prisma.user.findUnique({ where: { email: email } });
+      if (!user) {
+        return done(null, false, { message: 'User not found' });
+      }
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        return done(null, false, { message: 'Invalid password' });
+      }
+
+      
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  })
+);
 
 passport.serializeUser((user: any, done) => {
   done(null, user.id);
@@ -9,39 +29,9 @@ passport.serializeUser((user: any, done) => {
 
 passport.deserializeUser(async (id: number, done) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
-    if (!user) {
-      throw new Error('Something went wrong');
-    }
+    const user = await prisma.user.findUnique({ where: { id: id } });
     done(null, user);
-  } catch (error) {}
+  } catch (error) {
+    done(error);
+  }
 });
-
-passport.use(
-  new Strategy(
-    {
-      usernameField: 'email',
-      passwordField: 'password',
-    },
-    async (email: string, password: string, done) => {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-        if (!user) {
-          throw new Error('Something went wrong');
-        }
-        const isValid = await comparePassword(password, user.password);
-        if (!isValid) {
-          throw new Error('Password or email is incorrect');
-        }
-        return done(null, user);
-      } catch (error) {
-        console.log(error);
-        done(error);
-      }
-    }
-  )
-);
