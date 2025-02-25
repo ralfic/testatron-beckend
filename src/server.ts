@@ -3,14 +3,26 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
-import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { PrismaClient } from '@prisma/client';
 import passport from 'passport';
-import './strategies/local.strategy';
 import routes from './routes';
+import pg from 'pg';
+import pgSession from 'connect-pg-simple';
+import session from 'express-session';
+import './strategies/local.strategy';
 
 dotenv.config();
+
+const pool = new pg.Pool({
+  user: 'postgres',
+  host: 'localhost',
+  database: process.env.DATABASE_NAME,
+  password: process.env.DATABASE_PASSWORD,
+  port: 5432,
+});
+
+const PgSession = pgSession(session);
 
 const app = express();
 
@@ -23,15 +35,19 @@ async function main() {
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
+  app.use(express.json());
   app.use(
     session({
+      store: new PgSession({
+        pool: pool,
+        tableName: 'user_sessions',
+      }),
       secret: process.env.SESSION_SECRET || 'secret',
       resave: false,
       saveUninitialized: false,
-      cookie: { maxAge: 24 * 60 * 60 * 1000 },
+      cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
     })
   );
-  app.use(express.json());
   app.use(passport.initialize());
   app.use(passport.session());
 

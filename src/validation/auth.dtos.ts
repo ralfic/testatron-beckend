@@ -21,6 +21,5 @@ export const registerSchema = z.object({
   lastName: z.string(),
 });
 
-export type LoginSchema = z.infer<typeof loginSchema>;
+export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterSchema = z.infer<typeof registerSchema>;
-
