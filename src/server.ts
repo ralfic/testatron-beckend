@@ -31,7 +31,14 @@ export const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3434;
 
 async function main() {
-  app.use(cors());
+  app.use(
+    cors({
+      credentials: true,
+      origin: 'http://localhost:3000',
+      optionsSuccessStatus: 200,
+      methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
+    })
+  );
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
@@ -45,7 +52,12 @@ async function main() {
       secret: process.env.SESSION_SECRET || 'secret',
       resave: false,
       saveUninitialized: false,
-      cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
+      cookie: {
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        secure: false,
+        sameSite: 'lax',
+      },
     })
   );
   app.use(passport.initialize());

@@ -17,8 +17,14 @@ export const registerSchema = z.object({
     .max(32, {
       message: 'Password must be at most 32 characters',
     }),
-  firstName: z.string(),
-  lastName: z.string(),
+  fullName: z
+    .string({ required_error: 'Full name is required' })
+    .min(3, {
+      message: 'Full name must be at least 3 characters',
+    })
+    .max(32, {
+      message: 'Full name must be at most 32 characters',
+    }),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;

@@ -1,15 +1,13 @@
 import { Router } from 'express';
-import passport from 'passport';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { getAll, getProfile } from '../controllers/user.controller';
-const router = Router();
+import { getAll, profile } from '../controllers/user.controller';
 
-router.get('/profile', passport.authenticate('local'), getProfile);
+const router = Router();
 
 router.get('/users', authMiddleware, getAll);
 
 router.get('/users/:id', authMiddleware, getAll);
 
-
+router.get('/profile', authMiddleware, profile);
 
 export default router;

@@ -10,14 +10,14 @@ datasource db {
 model User {
     id        Int        @id @default(autoincrement())
     email     String     @unique
-    role      Role       @default(USER)
-    firstName String
-    lastName  String
+    role      Role       @default(STUDENT)
+    fullName  String     @map("full_name")
     password  String
     createdAt DateTime   @default(now())
     updatedAt DateTime   @updatedAt
+
     tests     Test[]
-    response  Response[]
+    responses  Response[]
 
     @@map("users")
 }
@@ -25,13 +25,17 @@ model User {
 model Test {
     id          Int        @id @default(autoincrement())
     title       String     @unique
+    isGraduate  Boolean    @default(false) @map("is_graduate")
     description String?
+
     createdAt   DateTime   @default(now())
     updatedAt   DateTime   @updatedAt
+
     author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId    Int        @map("author_id")
+
     questions   Question[]
-    response    Response[]
+    responses    Response[]
 
     @@map("tests")
 }
@@ -43,8 +47,9 @@ model Question {
     isRequired Boolean      @default(false) @map("is_required")
     test       Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
     testId     Int          @map("test_id")
+
     options    Option[]
-    answer     Answer[]
+    answers     Answer[]
 
     @@map("questions")
 }
@@ -55,7 +60,10 @@ model Option {
     isCorrect  Boolean  @default(false) @map("is_correct")
     question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
     questionId Int      @map("question_id")
-    answer     Answer[]
+
+    answer Answer[]
+
+    @@map("options")
 }
 
 model Response {
@@ -65,8 +73,10 @@ model Response {
     test      Test     @relation(fields: [testId], references: [id])
     testId    Int      @map("test_id")
     score     Float?
+    
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    
     answer    Answer[]
 
     @@map("responses")
@@ -80,6 +90,8 @@ model Answer {
     optionId   Int      @map("option_id")
     response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
     responseId Int      @map("response_id")
+
+    @@map("answers")
 }
 
 model UserSession {
@@ -98,5 +110,6 @@ enum QuestionType {
 
 enum Role {
     ADMIN
-    USER
+    TEACHER
+    STUDENT
 }
