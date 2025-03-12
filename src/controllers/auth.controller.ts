@@ -9,21 +9,20 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ errors: validation.error.errors });
   } else {
     try {
-      const { email, password, firstName, lastName } = validation.data;
+      const { email, password, fullName } = validation.data;
       const hashedPassword = await hashPassword(password);
       const user = await prisma.user.create({
         data: {
           email: email,
           password: hashedPassword,
-          firstName: firstName,
-          lastName: lastName,
+          fullName: fullName,
         },
       });
       if (!user) {
         throw new Error('Something went wrong');
       }
 
-      res.status(201).json({ message: 'Registration successful' });
+      res.status(201).json(user);
     } catch (error) {
       res.status(500).json({ message: 'Internal server error' });
     }
@@ -32,7 +31,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   if (req.user) {
-    res.status(200).json({ message: 'Login successful' });
+    res.status(200).json(req.user);
   } else {
     res.status(401).json({ message: 'Unauthorized' });
   }
@@ -47,4 +46,6 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     }
   });
 };
+
+
 

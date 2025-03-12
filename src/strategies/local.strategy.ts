@@ -15,7 +15,6 @@ passport.use(
         return done(null, false, { message: 'Invalid password' });
       }
 
-      
       return done(null, user);
     } catch (error) {
       return done(error);
@@ -29,7 +28,10 @@ passport.serializeUser((user: any, done) => {
 
 passport.deserializeUser(async (id: number, done) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: id } });
+    const user = await prisma.user.findUnique({
+      where: { id: id },
+      omit: { password: true, createdAt: true, updatedAt: true },
+    });
     done(null, user);
   } catch (error) {
     done(error);

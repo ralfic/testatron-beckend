@@ -49,9 +49,7 @@ export const getOne = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
-
-export const getProfile = async (
+export const profile = async (
   req: Request,
   res: Response
 ): Promise<void> => {
