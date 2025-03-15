@@ -73,8 +73,17 @@ export const updateTest = async (req: Request, res: Response) => {
 
       const existingQuestionIds = existingQuestions.map((q) => q.id);
       const newQuestionIds = validation.data.questions?.map((q) => q.id) || [];
+      const existingOptionIds = existingQuestions.flatMap((q) =>
+        q.options.map((o) => o.id)
+      );
       const questionsToDelete = existingQuestionIds.filter(
         (q) => !newQuestionIds.includes(q)
+      );
+      const optionsToDelete = existingOptionIds.filter(
+        (o) =>
+          !validation.data.questions?.some((q) =>
+            q.options?.some((op) => op.id === o)
+          )
       );
 
       if (validation.data.questions) {
@@ -118,6 +127,12 @@ export const updateTest = async (req: Request, res: Response) => {
       if (questionsToDelete.length > 0) {
         await tx.question.deleteMany({
           where: { id: { in: questionsToDelete } },
+        });
+      }
+
+      if (optionsToDelete.length > 0) {
+        await tx.option.deleteMany({
+          where: { id: { in: optionsToDelete } },
         });
       }
 
@@ -188,6 +203,24 @@ export const deleteTest = async (req: Request, res: Response) => {
 
     await prisma.test.delete({ where: { id: Number(req.params.id) } });
     res.status(200).json({ message: 'Test deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getMyTests = async (req: Request, res: Response) => {
+  const authorId = (req as any).user.id;
+
+  if (!authorId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const tests = await prisma.test.findMany({
+      where: { authorId: authorId },
+    });
+    res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
   }

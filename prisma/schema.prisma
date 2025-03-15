@@ -8,48 +8,49 @@ datasource db {
 }
 
 model User {
-    id        Int        @id @default(autoincrement())
-    email     String     @unique
-    role      Role       @default(STUDENT)
-    fullName  String     @map("full_name")
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    role      Role     @default(USER)
+    fullName  String   @map("full_name")
     password  String
-    createdAt DateTime   @default(now())
-    updatedAt DateTime   @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     tests     Test[]
-    responses  Response[]
+    responses Response[]
 
     @@map("users")
 }
 
 model Test {
-    id          Int        @id @default(autoincrement())
-    title       String     @unique
-    isGraduate  Boolean    @default(false) @map("is_graduate")
+    id          Int     @id @default(autoincrement())
+    title       String  @unique
+    isGraduate  Boolean @default(false) @map("is_graduate")
     description String?
 
-    createdAt   DateTime   @default(now())
-    updatedAt   DateTime   @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-    author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-    authorId    Int        @map("author_id")
+    author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId Int  @map("author_id")
 
-    questions   Question[]
-    responses    Response[]
+    questions Question[]
+    responses Response[]
 
     @@map("tests")
 }
 
 model Question {
-    id         Int          @id @default(autoincrement())
-    text       String
-    type       QuestionType
-    isRequired Boolean      @default(false) @map("is_required")
-    test       Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
-    testId     Int          @map("test_id")
+    id          Int          @id @default(autoincrement())
+    text        String
+    type        QuestionType
+    description String?
+    isRequired  Boolean      @default(false) @map("is_required")
+    test        Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId      Int          @map("test_id")
 
-    options    Option[]
-    answers     Answer[]
+    options Option[]
+    answers Answer[]
 
     @@map("questions")
 }
@@ -67,17 +68,17 @@ model Option {
 }
 
 model Response {
-    id        Int      @id @default(autoincrement())
-    user      User     @relation(fields: [userId], references: [id])
-    userId    Int      @map("user_id")
-    test      Test     @relation(fields: [testId], references: [id])
-    testId    Int      @map("test_id")
-    score     Float?
-    
+    id     Int    @id @default(autoincrement())
+    user   User   @relation(fields: [userId], references: [id])
+    userId Int    @map("user_id")
+    test   Test   @relation(fields: [testId], references: [id])
+    testId Int    @map("test_id")
+    score  Float?
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    
-    answer    Answer[]
+
+    answer Answer[]
 
     @@map("responses")
 }
@@ -110,6 +111,5 @@ enum QuestionType {
 
 enum Role {
     ADMIN
-    TEACHER
-    STUDENT
+    USER
 }
