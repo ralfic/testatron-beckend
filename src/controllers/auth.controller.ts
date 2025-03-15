@@ -22,7 +22,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         throw new Error('Something went wrong');
       }
 
-      res.status(201).json(user);
+      req.login(user, (err: Error | null) => {
+        if (err) {
+          res
+            .status(500)
+            .json({ message: 'Internal server error during auto-login' });
+          return;
+        }
+
+        res.status(201).json(user);
+      });
     } catch (error) {
       res.status(500).json({ message: 'Internal server error' });
     }
@@ -46,6 +55,3 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     }
   });
 };
-
-
-
