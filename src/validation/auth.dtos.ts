@@ -27,5 +27,19 @@ export const registerSchema = z.object({
     }),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string({ required_error: 'Current password is required' }),
+  newPassword: z.string({ required_error: 'New password is required' }).min(6, {
+    message: 'Password must be at least 6 characters',
+  }),
+  confirmNewPassword: z
+    .string({
+      required_error: 'Confirm new password is required',
+    })
+    .min(6, {
+      message: 'Password must be at least 6 characters',
+    }),
+});
+
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterSchema = z.infer<typeof registerSchema>;

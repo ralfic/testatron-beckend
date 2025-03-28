@@ -1,7 +1,8 @@
 import { prisma } from '@/server';
-import { updateTestSchema } from '@/validation/test.dtos';
+import { publishTestSchema, updateTestSchema } from '@/validation/test.dtos';
 import { QuestionType } from '@prisma/client';
 import { Request, Response } from 'express';
+import { customAlphabet } from 'nanoid';
 
 export const createTest = async (req: Request, res: Response) => {
   const authorId = (req as any).user.id;
@@ -22,7 +23,7 @@ export const createTest = async (req: Request, res: Response) => {
 
     res.status(201).json(newTest);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error ' });
   }
 };
 
@@ -59,6 +60,8 @@ export const updateTest = async (req: Request, res: Response) => {
         data: {
           title: validation.data.title,
           description: validation.data.description,
+          showOptionsScore: validation.data.showOptionsScore,
+          showCorrectAnswers: validation.data.showCorrectAnswers,
         },
       });
 
@@ -94,6 +97,7 @@ export const updateTest = async (req: Request, res: Response) => {
               text: question.text,
               type: question.type,
               isRequired: question.isRequired,
+              score: question.score,
             },
             create: {
               testId: Number(testId),
@@ -117,7 +121,6 @@ export const updateTest = async (req: Request, res: Response) => {
               create: {
                 questionId: questionId.id,
                 text: option.text ?? 'New Option',
-                isCorrect: option.isCorrect,
               },
             });
           }
@@ -202,6 +205,7 @@ export const deleteTest = async (req: Request, res: Response) => {
     }
 
     await prisma.test.delete({ where: { id: Number(req.params.id) } });
+
     res.status(200).json({ message: 'Test deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
@@ -224,4 +228,57 @@ export const getMyTests = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
   }
+};
+
+export const publishTest = async (req: Request, res: Response) => {
+  const validation = publishTestSchema.safeParse(req.body);
+
+  const testId = Number(req.params.id);
+
+  if (!testId) {
+    res.status(404).json({ message: 'Test not found' });
+    return;
+  }
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  try {
+    const code = await generateUniqueCode();
+
+    await prisma.test.update({
+      where: { id: testId },
+      data: {
+        isPublished: true,
+        expiresAt: validation.data?.expiresAt,
+        code: code,
+      },
+    });
+
+    res.status(200).json({ message: 'Test published successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const generateUniqueCode = async (): Promise<string> => {
+  const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 8);
+  let code: string;
+  let exists = true;
+  let attempts = 0;
+
+  while (exists && attempts < 10) {
+    code = nanoid();
+    const existingTest = await prisma.test.findUnique({ where: { code } });
+    exists = !!existingTest;
+    attempts++;
+  }
+
+  if (exists) {
+    throw new Error('Failed to generate a unique test code');
+  }
+
+  return code!;
 };

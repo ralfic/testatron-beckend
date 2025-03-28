@@ -9,12 +9,13 @@ datasource db {
 
 model User {
     id        Int      @id @default(autoincrement())
-    email     String   @unique
-    role      Role     @default(USER)
-    fullName  String   @map("full_name")
-    password  String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    email    String @unique
+    role     Role   @default(USER)
+    fullName String @map("full_name")
+    password String
 
     tests     Test[]
     responses Response[]
@@ -23,13 +24,20 @@ model User {
 }
 
 model Test {
-    id          Int     @id @default(autoincrement())
-    title       String  @unique
-    isGraduate  Boolean @default(false) @map("is_graduate")
-    description String?
-
+    id        Int      @id @default(autoincrement())
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    title       String  @default("New test")
+    description String?
+
+    isPublished Boolean @default(false) @map("is_published")
+    isExpired          Boolean @default(false) @map("is_expired")
+    showCorrectAnswers Boolean @default(false) @map("show_correct_answers")
+    showOptionsScore   Boolean @default(false) @map("show_options_score")
+
+    code      String?   @unique
+    expiresAt DateTime? @map("expires_at")
 
     author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId Int  @map("author_id")
@@ -41,13 +49,18 @@ model Test {
 }
 
 model Question {
-    id          Int          @id @default(autoincrement())
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
     text        String
     type        QuestionType
     description String?
     isRequired  Boolean      @default(false) @map("is_required")
-    test        Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
-    testId      Int          @map("test_id")
+    score       Int?         @default(3)
+
+    test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId Int  @map("test_id")
 
     options Option[]
     answers Answer[]
@@ -56,9 +69,13 @@ model Question {
 }
 
 model Option {
-    id         Int      @id @default(autoincrement())
-    text       String
-    isCorrect  Boolean  @default(false) @map("is_correct")
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    text      String
+    isCorrect Boolean @default(false) @map("is_correct")
+
     question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
     questionId Int      @map("question_id")
 
@@ -68,15 +85,15 @@ model Option {
 }
 
 model Response {
-    id     Int    @id @default(autoincrement())
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
     user   User   @relation(fields: [userId], references: [id])
     userId Int    @map("user_id")
     test   Test   @relation(fields: [testId], references: [id])
     testId Int    @map("test_id")
     score  Float?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
 
     answer Answer[]
 
@@ -84,7 +101,10 @@ model Response {
 }
 
 model Answer {
-    id         Int      @id @default(autoincrement())
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
     question   Question @relation(fields: [questionId], references: [id])
     questionId Int      @map("question_id")
     option     Option   @relation(fields: [optionId], references: [id])
