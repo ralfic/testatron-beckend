@@ -31,10 +31,10 @@ model Test {
     title       String  @default("New test")
     description String?
 
-    isPublished Boolean @default(false) @map("is_published")
-    isExpired          Boolean @default(false) @map("is_expired")
-    showCorrectAnswers Boolean @default(false) @map("show_correct_answers")
-    showOptionsScore   Boolean @default(false) @map("show_options_score")
+    status             TestStatus @default(DRAFT)
+    isExpired          Boolean    @default(false) @map("is_expired")
+    showCorrectAnswers Boolean    @default(false) @map("show_correct_answers")
+    showQuestionScore  Boolean    @default(false) @map("show_question_score")
 
     code      String?   @unique
     expiresAt DateTime? @map("expires_at")
@@ -56,7 +56,6 @@ model Question {
     text        String
     type        QuestionType
     description String?
-    isRequired  Boolean      @default(false) @map("is_required")
     score       Int?         @default(3)
 
     test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
@@ -124,7 +123,6 @@ model UserSession {
 }
 
 enum QuestionType {
-    TEXT
     MULTIPLE
     SINGLE
 }
@@ -132,4 +130,10 @@ enum QuestionType {
 enum Role {
     ADMIN
     USER
+}
+
+enum TestStatus {
+    DRAFT
+    PUBLISHED
+    EXPIRED
 }

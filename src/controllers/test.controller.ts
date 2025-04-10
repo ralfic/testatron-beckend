@@ -1,13 +1,24 @@
 import { prisma } from '@/server';
-import { publishTestSchema, updateTestSchema } from '@/validation/test.dtos';
-import { QuestionType } from '@prisma/client';
+import {
+  createQuestionSchema,
+  createTestSchema,
+  publishTestSchema,
+  updateQuestionSchema,
+  updateTestInfoSchema,
+} from '@/validation/test.dtos';
+import { TestStatus } from '@prisma/client';
 import { Request, Response } from 'express';
 import { customAlphabet } from 'nanoid';
 
 export const createTest = async (req: Request, res: Response) => {
-  const authorId = (req as any).user.id;
+  const validation = createTestSchema.safeParse(req.body);
 
-  if (!authorId) {
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  if (!req.user) {
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }
@@ -15,9 +26,9 @@ export const createTest = async (req: Request, res: Response) => {
   try {
     const newTest = await prisma.test.create({
       data: {
-        title: 'New Test',
-        description: 'Description',
-        authorId: authorId,
+        title: validation.data.title,
+        description: validation.data.description,
+        authorId: req.user.id,
       },
     });
 
@@ -27,140 +38,17 @@ export const createTest = async (req: Request, res: Response) => {
   }
 };
 
-export const updateTest = async (req: Request, res: Response) => {
-  const validation = updateTestSchema.safeParse(req.body);
-  if (!validation.success) {
-    res.status(400).json({ errors: validation.error.errors });
+export const getTestById = async (req: Request, res: Response) => {
+  const testId = Number(req.params.testId);
+
+  if (isNaN(testId)) {
+    res.status(400).json({ message: 'Invalid test ID' });
     return;
   }
 
   try {
-    const userId = (req as any).user.id;
-
-    const checkAuthor = await prisma.test.findUnique({
-      where: { id: Number(req.params.testId) },
-      select: { authorId: true },
-    });
-
-    if (checkAuthor?.authorId !== userId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
-
-    const { testId } = req.params;
-
-    if (!testId) {
-      res.status(400).json({ message: 'Test ID is required' });
-      return;
-    }
-
-    const updatedTest = await prisma.$transaction(async (tx) => {
-      const test = await tx.test.update({
-        where: { id: Number(testId) },
-        data: {
-          title: validation.data.title,
-          description: validation.data.description,
-          showOptionsScore: validation.data.showOptionsScore,
-          showCorrectAnswers: validation.data.showCorrectAnswers,
-        },
-      });
-
-      if (!test) {
-        throw new Error('Something went wrong');
-      }
-
-      const existingQuestions = await tx.question.findMany({
-        where: { testId: Number(testId) },
-        include: { options: true },
-      });
-
-      const existingQuestionIds = existingQuestions.map((q) => q.id);
-      const newQuestionIds = validation.data.questions?.map((q) => q.id) || [];
-      const existingOptionIds = existingQuestions.flatMap((q) =>
-        q.options.map((o) => o.id)
-      );
-      const questionsToDelete = existingQuestionIds.filter(
-        (q) => !newQuestionIds.includes(q)
-      );
-      const optionsToDelete = existingOptionIds.filter(
-        (o) =>
-          !validation.data.questions?.some((q) =>
-            q.options?.some((op) => op.id === o)
-          )
-      );
-
-      if (validation.data.questions) {
-        for (const question of validation.data.questions) {
-          const questionId = await tx.question.upsert({
-            where: { id: question.id || -1 },
-            update: {
-              text: question.text,
-              type: question.type,
-              isRequired: question.isRequired,
-              score: question.score,
-            },
-            create: {
-              testId: Number(testId),
-              text: question.text ?? 'New Question',
-              type: question.type ?? QuestionType.SINGLE,
-              isRequired: question.isRequired,
-            },
-          });
-
-          if (!question.options) {
-            continue;
-          }
-
-          for (const option of question.options) {
-            await tx.option.upsert({
-              where: { id: option.id || -1 },
-              update: {
-                text: option.text,
-                isCorrect: option.isCorrect,
-              },
-              create: {
-                questionId: questionId.id,
-                text: option.text ?? 'New Option',
-              },
-            });
-          }
-        }
-      }
-
-      if (questionsToDelete.length > 0) {
-        await tx.question.deleteMany({
-          where: { id: { in: questionsToDelete } },
-        });
-      }
-
-      if (optionsToDelete.length > 0) {
-        await tx.option.deleteMany({
-          where: { id: { in: optionsToDelete } },
-        });
-      }
-
-      return await tx.test.findUnique({
-        where: { id: Number(testId) },
-        include: {
-          questions: {
-            include: {
-              options: true,
-            },
-          },
-        },
-      });
-    });
-
-    res.status(200).json(updatedTest);
-  } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-export const getOneTest = async (req: Request, res: Response) => {
-  try {
     const test = await prisma.test.findUnique({
-      where: { id: Number(req.params.id) },
+      where: { id: testId },
       include: {
         questions: {
           include: {
@@ -182,21 +70,16 @@ export const getOneTest = async (req: Request, res: Response) => {
 };
 
 export const deleteTest = async (req: Request, res: Response) => {
+  const testId = Number(req.params.testId);
+
+  if (isNaN(testId)) {
+    res.status(400).json({ message: 'Invalid test ID' });
+    return;
+  }
+
   try {
-    const userId = (req as any).user.id;
-
-    const checkAuthor = await prisma.test.findUnique({
-      where: { id: Number(req.params.testId) },
-      select: { authorId: true },
-    });
-
-    if (checkAuthor?.authorId !== userId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
-
     const test = await prisma.test.findUnique({
-      where: { id: Number(req.params.id) },
+      where: { id: testId },
     });
 
     if (!test) {
@@ -204,7 +87,7 @@ export const deleteTest = async (req: Request, res: Response) => {
       return;
     }
 
-    await prisma.test.delete({ where: { id: Number(req.params.id) } });
+    await prisma.test.delete({ where: { id: testId } });
 
     res.status(200).json({ message: 'Test deleted successfully' });
   } catch (error) {
@@ -213,16 +96,14 @@ export const deleteTest = async (req: Request, res: Response) => {
 };
 
 export const getMyTests = async (req: Request, res: Response) => {
-  const authorId = (req as any).user.id;
-
-  if (!authorId) {
+  if (!req.user) {
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }
 
   try {
     const tests = await prisma.test.findMany({
-      where: { authorId: authorId },
+      where: { authorId: req.user.id },
     });
     res.status(200).json(tests);
   } catch (error) {
@@ -233,7 +114,7 @@ export const getMyTests = async (req: Request, res: Response) => {
 export const publishTest = async (req: Request, res: Response) => {
   const validation = publishTestSchema.safeParse(req.body);
 
-  const testId = Number(req.params.id);
+  const testId = Number(req.params.testId);
 
   if (!testId) {
     res.status(404).json({ message: 'Test not found' });
@@ -251,9 +132,11 @@ export const publishTest = async (req: Request, res: Response) => {
     await prisma.test.update({
       where: { id: testId },
       data: {
-        isPublished: true,
+        status: TestStatus.PUBLISHED,
         expiresAt: validation.data?.expiresAt,
         code: code,
+        showCorrectAnswers: validation.data?.showCorrectAnswers,
+        showQuestionScore: validation.data?.showQuestionScore,
       },
     });
 
@@ -281,4 +164,174 @@ const generateUniqueCode = async (): Promise<string> => {
   }
 
   return code!;
+};
+
+export const createQuestion = async (req: Request, res: Response) => {
+  const validation = createQuestionSchema.safeParse(req.body);
+
+  const testId = Number(req.params.testId);
+
+  if (!testId) {
+    res.status(404).json({ message: 'Id must be provided' });
+    return;
+  }
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  try {
+    const testExists = await prisma.test.findUnique({
+      where: { id: testId },
+    });
+
+    if (!testExists) {
+      res.status(404).json({ message: 'Test not found' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const question = await tx.question.create({
+        data: {
+          testId: testId,
+          description: validation.data.description,
+          score: validation.data.score,
+          text: validation.data.text,
+          type: validation.data.type,
+        },
+      });
+      await tx.option.createMany({
+        data: validation.data.options.map((option) => ({
+          questionId: question.id,
+          text: option.text,
+          isCorrect: option.isCorrect,
+        })),
+      });
+    });
+
+    res.status(201).json({
+      message: 'Question created successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateQuestion = async (req: Request, res: Response) => {
+  const validation = updateQuestionSchema.safeParse(req.body);
+
+  const questionId = Number(req.params.id);
+  const testId = Number(req.params.testId);
+
+  if (!questionId || !testId) {
+    res.status(404).json({ message: 'Ids must be provided' });
+    return;
+  }
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const question = await tx.question.update({
+        where: { id: questionId },
+        data: {
+          description: validation.data.description,
+          score: validation.data.score,
+          text: validation.data.text,
+          type: validation.data.type,
+        },
+        include: {
+          options: true,
+        },
+      });
+
+      const existingOptionsId = question?.options.map((option) => option.id);
+      const currentOptionsId =
+        validation.data?.options?.map((option) => option.id) ?? [];
+      const optionsToDelete = existingOptionsId?.filter(
+        (id) => !currentOptionsId.includes(id)
+      );
+
+      if (validation.data.options) {
+        Promise.all(
+          validation.data.options.map(async (option) => {
+            await prisma.option.upsert({
+              where: { id: option.id ?? -1 },
+              update: {
+                text: option.text,
+                isCorrect: option.isCorrect,
+              },
+              create: {
+                text: option.text,
+                isCorrect: option.isCorrect,
+                questionId: questionId,
+              },
+            });
+          })
+        );
+
+        await tx.option.deleteMany({
+          where: { id: { in: optionsToDelete } },
+        });
+      }
+    });
+
+    res.status(200).json({ message: 'Question updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const deleteQuestion = async (req: Request, res: Response) => {
+  const questionId = Number(req.params.id);
+  const testId = Number(req.params.testId);
+
+  if (!questionId || !testId) {
+    res.status(404).json({ message: 'Ids must be provided' });
+    return;
+  }
+
+  try {
+    await prisma.question.delete({
+      where: { id: questionId },
+    });
+
+    res.status(200).json({ message: 'Question deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateTestInfo = async (req: Request, res: Response) => {
+  const validation = updateTestInfoSchema.safeParse(req.body);
+
+  const testId = Number(req.params.testId);
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  if (!testId) {
+    res.status(404).json({ message: 'Id must be provided' });
+    return;
+  }
+
+  try {
+    await prisma.test.update({
+      where: { id: testId },
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+      },
+    });
+
+    res.status(200).json({ message: 'Test updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };

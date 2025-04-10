@@ -62,8 +62,12 @@ export const changePassword = async (req: Request, res: Response) => {
   if (!validation.success) {
     res.status(400).json({ errors: validation.error.errors });
   } else {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const userId = req.user.id;
     try {
-      const userId = (req as any).user.id;
       const { currentPassword, newPassword, confirmNewPassword } =
         validation.data;
 

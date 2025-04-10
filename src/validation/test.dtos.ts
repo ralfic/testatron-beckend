@@ -1,32 +1,14 @@
 import { QuestionType } from '@prisma/client';
 import { z } from 'zod';
 
-export const updateTestSchema = z.object({
+export const createTestSchema = z.object({
+  title: z.string().min(3).max(32),
+  description: z.string().optional(),
+});
+
+export const updateTestInfoSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
-  isPublished: z.boolean().optional(),
-  showCorrectAnswers: z.boolean().optional(),
-  showOptionsScore: z.boolean().optional(),
-  questions: z
-    .array(
-      z.object({
-        id: z.number().optional(),
-        text: z.string().optional(),
-        type: z.nativeEnum(QuestionType).optional(),
-        isRequired: z.boolean().optional(),
-        score: z.number().optional(),
-        options: z
-          .array(
-            z.object({
-              id: z.number().optional(),
-              text: z.string().optional(),
-              isCorrect: z.boolean().optional(),
-            })
-          )
-          .optional(),
-      })
-    )
-    .optional(),
 });
 
 export const publishTestSchema = z.object({
@@ -42,10 +24,39 @@ export const publishTestSchema = z.object({
       }
     )
     .optional(),
+  showCorrectAnswers: z.boolean().optional(),
+  showQuestionScore: z.boolean().optional(),
 });
 
-export const answersTestSchema = z
-  .array(z.object({ questionId: z.number(), optionId: z.number() }))
-  .optional();
+export const createQuestionSchema = z.object({
+  text: z.string(),
+  type: z.nativeEnum(QuestionType),
+  description: z.string().or(z.null()).optional(),
+  score: z.number().optional(),
+  options: z
+    .array(
+      z.object({
+        text: z.string(),
+        isCorrect: z.boolean(),
+      })
+    )
+    .min(2, {
+      message: 'Must have at least 2 options',
+    }),
+});
 
-export type AnswersTest = z.infer<typeof answersTestSchema>;
+export const updateQuestionSchema = z.object({
+  text: z.string().optional(),
+  type: z.nativeEnum(QuestionType).optional(),
+  description: z.string().or(z.null()).optional(),
+  score: z.number().optional(),
+  options: z
+    .array(
+      z.object({
+        id: z.number().optional(),
+        text: z.string(),
+        isCorrect: z.boolean().optional(),
+      })
+    )
+    .optional(),
+});
