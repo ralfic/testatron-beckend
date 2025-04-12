@@ -8,6 +8,7 @@ import {
   deleteQuestion,
   updateQuestion,
   updateTestInfo,
+  joinTest,
 } from '@/controllers/test.controller';
 import { authMiddleware } from '@/middleware/auth.middleware';
 import { testMiddleware } from '@/middleware/test.middleware';
@@ -19,7 +20,12 @@ router.post('/test', authMiddleware, createTest);
 
 router.get('/test/:testId', authMiddleware, testMiddleware(), getTestById);
 
-router.delete('/test/:testId', authMiddleware, testMiddleware(true), deleteTest);
+router.delete(
+  '/test/:testId',
+  authMiddleware,
+  testMiddleware(true),
+  deleteTest
+);
 
 router.get('/tests/my', authMiddleware, getMyTests);
 
@@ -51,6 +57,15 @@ router.patch(
   updateQuestion
 );
 
-router.patch('/test/:testId', authMiddleware, testMiddleware(true), updateTestInfo);
+router.patch(
+  '/test/:testId',
+  authMiddleware,
+  testMiddleware(true),
+  updateTestInfo
+);
+
+router.post('test/join/:code', joinTest);
+
+router.get('test/sessions/:id', joinTest);
 
 export default router;

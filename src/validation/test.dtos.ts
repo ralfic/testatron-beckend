@@ -60,3 +60,12 @@ export const updateQuestionSchema = z.object({
     )
     .optional(),
 });
+
+export const joinTestSchema = z.object({
+  guestName: z.string().optional(),
+});
+
+export const answerQuestionSchema = z.object({
+  questionId: z.number(),
+  optionId: z.number(),
+});
