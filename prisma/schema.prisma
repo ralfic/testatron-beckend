@@ -17,8 +17,8 @@ model User {
     fullName String @map("full_name")
     password String
 
-    tests     Test[]
-    responses Response[]
+    tests        Test[]
+    testSessions TestSession[]
 
     @@map("users")
 }
@@ -42,8 +42,8 @@ model Test {
     author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId Int  @map("author_id")
 
-    questions Question[]
-    responses Response[]
+    questions   Question[]
+    testSession TestSession[]
 
     @@map("tests")
 }
@@ -83,20 +83,25 @@ model Option {
     @@map("options")
 }
 
-model Response {
+model TestSession {
     id        Int      @id @default(autoincrement())
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    isFinished Boolean @default(false)
 
-    user   User   @relation(fields: [userId], references: [id])
-    userId Int    @map("user_id")
-    test   Test   @relation(fields: [testId], references: [id])
-    testId Int    @map("test_id")
-    score  Float?
+    uuid String @unique @default(nanoid())
 
-    answer Answer[]
+    test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId Int  @map("test_id")
 
-    @@map("responses")
+    user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId Int?  @map("user_id")
+
+    guestName String?
+
+    answers Answer[]
+
+    @@map("test_sessions")
 }
 
 model Answer {
@@ -104,12 +109,12 @@ model Answer {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    question   Question @relation(fields: [questionId], references: [id])
-    questionId Int      @map("question_id")
-    option     Option   @relation(fields: [optionId], references: [id])
-    optionId   Int      @map("option_id")
-    response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-    responseId Int      @map("response_id")
+    question      Question     @relation(fields: [questionId], references: [id])
+    questionId    Int          @map("question_id")
+    option        Option       @relation(fields: [optionId], references: [id])
+    optionId      Int          @map("option_id")
+    TestSession   TestSession? @relation(fields: [testSessionId], references: [id])
+    testSessionId Int?
 
     @@map("answers")
 }

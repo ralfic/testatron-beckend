@@ -1,7 +1,9 @@
 import { prisma } from '@/server';
 import {
+  answerQuestionSchema,
   createQuestionSchema,
   createTestSchema,
+  joinTestSchema,
   publishTestSchema,
   updateQuestionSchema,
   updateTestInfoSchema,
@@ -331,6 +333,109 @@ export const updateTestInfo = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ message: 'Test updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const joinTest = async (req: Request, res: Response) => {
+  const code = req.params.code;
+  const validation = joinTestSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  const guestName = validation.data.guestName;
+
+  if (!code) {
+    res.status(400).json({ message: 'Code is required' });
+    return;
+  }
+
+  try {
+    const test = await prisma.test.findUnique({
+      where: { code: code },
+    });
+
+    if (!test) {
+      res.status(404).json({ message: 'Test not found' });
+      return;
+    }
+
+    const session = await prisma.testSession.create({
+      data: {
+        testId: test.id,
+        userId: req?.user?.id,
+        guestName: guestName,
+      },
+    });
+
+    res.status(200).json(session);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getSessionById = async (req: Request, res: Response) => {
+  const sessionId = Number(req.params.id);
+
+  if (!sessionId) {
+    res.status(404).json({ message: 'Id must be provided' });
+    return;
+  }
+
+  try {
+    const session = await prisma.testSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      res.status(404).json({ message: 'Session not found' });
+      return;
+    }
+
+    res.status(200).json(session);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const answerQuestion = async (req: Request, res: Response) => {
+  const validation = answerQuestionSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    res.status(400).json({ errors: validation.error.errors });
+    return;
+  }
+
+  const sessionId = Number(req.params.id);
+
+  if (!sessionId) {
+    res.status(404).json({ message: 'Id must be provided' });
+    return;
+  }
+
+  try {
+    const session = await prisma.testSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      res.status(404).json({ message: 'Session not found' });
+      return;
+    }
+
+    const answer = await prisma.answer.create({
+      data: {
+        questionId: validation.data.questionId,
+        testSessionId: session.id,
+        optionId: validation.data.optionId,
+      },
+    });
+
+    res.status(200).json(answer);
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
   }
