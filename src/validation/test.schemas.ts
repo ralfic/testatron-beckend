@@ -9,6 +9,20 @@ export const createTestSchema = z.object({
 export const updateTestInfoSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
+  expiresAt: z
+    .string()
+    .transform((date) => new Date(date))
+    .refine(
+      (date) => {
+        return date > new Date();
+      },
+      {
+        message: 'Expires at must be in the future',
+      }
+    )
+    .optional(),
+  showCorrectAnswers: z.boolean().optional(),
+  showQuestionScore: z.boolean().optional(),
 });
 
 export const publishTestSchema = z.object({
@@ -67,5 +81,9 @@ export const joinTestSchema = z.object({
 
 export const answerQuestionSchema = z.object({
   questionId: z.number(),
-  optionId: z.number(),
+  selectedOptions: z
+    .array(z.object({ id: z.number(), questionId: z.number() }))
+    .optional(),
+  answerId: z.number().optional(),
+  testSessionId: z.number(),
 });

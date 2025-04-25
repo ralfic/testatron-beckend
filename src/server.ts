@@ -15,8 +15,8 @@ import './strategies/local.strategy';
 dotenv.config();
 
 const pool = new pg.Pool({
-  user: 'postgres',
-  host: 'localhost',
+  user: process.env.USER_POSTGRES,
+  host: process.env.DATABASE_HOST,
   database: process.env.DATABASE_NAME,
   password: process.env.DATABASE_PASSWORD,
   port: 5432,
@@ -34,9 +34,9 @@ async function main() {
   app.use(
     cors({
       credentials: true,
-      origin: 'http://localhost:3000',
+      origin: process.env.ORIGIN_PRODUCTION_URL,
       optionsSuccessStatus: 200,
-      methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     })
   );
   app.use(helmet());
