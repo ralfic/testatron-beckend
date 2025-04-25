@@ -19,6 +19,8 @@ model User {
 
     tests        Test[]
     testSessions TestSession[]
+    testResults  TestResult[]
+    
 
     @@map("users")
 }
@@ -32,7 +34,6 @@ model Test {
     description String?
 
     status             TestStatus @default(DRAFT)
-    isExpired          Boolean    @default(false) @map("is_expired")
     showCorrectAnswers Boolean    @default(false) @map("show_correct_answers")
     showQuestionScore  Boolean    @default(false) @map("show_question_score")
 
@@ -43,7 +44,8 @@ model Test {
     authorId Int  @map("author_id")
 
     questions   Question[]
-    testSession TestSession[]
+
+    testSessions TestSession[]
 
     @@map("tests")
 }
@@ -56,10 +58,12 @@ model Question {
     text        String
     type        QuestionType
     description String?
-    score       Int?         @default(3)
+    score       Int        @default(3)
 
     test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
     testId Int  @map("test_id")
+
+   
 
     options Option[]
     answers Answer[]
@@ -78,7 +82,7 @@ model Option {
     question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
     questionId Int      @map("question_id")
 
-    answer Answer[]
+    answers Answer[]
 
     @@map("options")
 }
@@ -87,19 +91,21 @@ model TestSession {
     id        Int      @id @default(autoincrement())
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    isFinished Boolean @default(false)
+    endedAt DateTime?
+    status  TestSessionStatus @default(IN_PROGRESS)
 
     uuid String @unique @default(nanoid())
 
     test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
     testId Int  @map("test_id")
-
     user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId Int?  @map("user_id")
 
     guestName String?
 
     answers Answer[]
+
+    testResults TestResult[]
 
     @@map("test_sessions")
 }
@@ -111,12 +117,37 @@ model Answer {
 
     question      Question     @relation(fields: [questionId], references: [id])
     questionId    Int          @map("question_id")
-    option        Option       @relation(fields: [optionId], references: [id])
-    optionId      Int          @map("option_id")
+    
     TestSession   TestSession? @relation(fields: [testSessionId], references: [id])
     testSessionId Int?
 
+    score Int @default(0)
+    status AnswerStatus @default(SKIPPED)
+
+
+    
+    selectedOptions Option[] 
+
     @@map("answers")
+}
+
+model TestResult {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    testSession TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+    testSessionId Int  @map("test_session_id")
+    user          User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId        Int?  @map("user_id")
+
+    score  Int
+    countCorrect   Int @map("count_correct")
+    countWrong     Int @map("count_wrong")
+    countAlmostCorrect Int  @map("count_almost_correct")
+    countSkipped   Int @map("count_skipped")
+
+    @@map("test_results")
 }
 
 model UserSession {
@@ -141,4 +172,16 @@ enum TestStatus {
     DRAFT
     PUBLISHED
     EXPIRED
+}
+
+enum TestSessionStatus {
+    IN_PROGRESS
+    FINISHED
+}
+
+enum AnswerStatus {
+    CORRECT
+    INCORRECT
+    ALMOST_CORRECT
+    SKIPPED
 }
