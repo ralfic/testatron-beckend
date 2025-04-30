@@ -9,5 +9,6 @@ export const authMiddleware = async (
     return next();
   } else {
     res.status(401).json({ message: 'Unauthorized' });
+    return 
   }
 };

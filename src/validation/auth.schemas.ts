@@ -25,6 +25,7 @@ export const registerSchema = z.object({
     .max(32, {
       message: 'Full name must be at most 32 characters',
     }),
+  role: z.enum(['TEACHER', 'STUDENT']),
 });
 
 export const changePasswordSchema = z.object({

@@ -2,6 +2,9 @@ import { Strategy } from 'passport-local';
 import { prisma } from '../server';
 import passport from 'passport';
 import { comparePassword } from '@/utils/helpers';
+import { User } from '@prisma/client';
+
+type UserSession = Omit<User, 'password' | 'createdAt' | 'updatedAt'>;
 
 passport.use(
   new Strategy({ usernameField: 'email' }, async (email, password, done) => {
@@ -22,7 +25,7 @@ passport.use(
   })
 );
 
-passport.serializeUser((user: any, done) => {
+passport.serializeUser((user: UserSession, done) => {
   done(null, user.id);
 });
 
@@ -32,6 +35,10 @@ passport.deserializeUser(async (id: number, done) => {
       where: { id: id },
       omit: { password: true, createdAt: true, updatedAt: true },
     });
+
+    if (!user) {
+      return done(null, false);
+    }
     done(null, user);
   } catch (error) {
     done(error);
