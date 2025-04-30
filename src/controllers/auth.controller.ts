@@ -1,6 +1,7 @@
 import { prisma } from '@/server';
 import { hashPassword } from '@/utils/helpers';
 import { registerSchema } from '@/validation/auth.schemas';
+import { Role } from '@prisma/client';
 import { Request, Response } from 'express';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -9,13 +10,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ errors: validation.error.errors });
   } else {
     try {
-      const { email, password, fullName } = validation.data;
+      const { email, password, fullName, role } = validation.data;
       const hashedPassword = await hashPassword(password);
+      if (role !== Role.STUDENT && role !== Role.TEACHER) {
+        throw new Error('Invalid role');
+      }
       const user = await prisma.user.create({
         data: {
           email: email,
           password: hashedPassword,
           fullName: fullName,
+          role: role,
         },
       });
       if (!user) {

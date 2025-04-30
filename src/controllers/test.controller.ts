@@ -1,4 +1,5 @@
 import { prisma } from '@/server';
+import { TestStatus } from '@prisma/client';
 import { Request, Response } from 'express';
 
 export const getTestById = async (req: Request, res: Response) => {
@@ -38,9 +39,29 @@ export const getMyTests = async (req: Request, res: Response) => {
     return;
   }
 
+  const testStatus = req.query.status as undefined | string;
+  const testSearchTitle = req.query.search as undefined | string;
+
+  const status = testStatus
+    ? testStatus === 'expired'
+      ? TestStatus.EXPIRED
+      : testStatus === 'ongoing'
+      ? TestStatus.PUBLISHED
+      : null
+    : null;
+
   try {
     const tests = await prisma.test.findMany({
-      where: { authorId: req.user.id },
+      where: {
+        authorId: req.user.id,
+        ...(status && { status: status }),
+        ...(testSearchTitle && {
+          title: {
+            contains: testSearchTitle,
+            mode: 'insensitive',
+          },
+        }),
+      },
     });
     res.status(200).json(tests);
   } catch (error) {
