@@ -5,7 +5,7 @@ import passport from 'passport';
 
 const router = Router();
 
-router.post('/auth', passport.authenticate('local'), login);
+router.post('/auth/login', passport.authenticate('local'), login);
 
 router.post('/auth/logout', authMiddleware, logout);
 

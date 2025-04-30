@@ -160,20 +160,20 @@ export const sendResponseTest = async (req: Request, res: Response) => {
   }
 
   try {
-    const session = await prisma.testSession.findUnique({
-      where: { uuid: uuid },
-    });
-
-    if (!session) {
-      res.status(404).json({ message: 'Session not found' });
-      return;
-    }
-
     const result = await prisma.$transaction(async (tx) => {
+      const session = await prisma.testSession.findUnique({
+        where: { uuid: uuid },
+      });
+
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
       const testSession = await tx.testSession.update({
         where: { id: session.id },
         data: {
           status: TestSessionStatus.FINISHED,
+          endedAt: new Date(),
         },
         include: {
           answers: {
@@ -197,20 +197,21 @@ export const sendResponseTest = async (req: Request, res: Response) => {
 
       let countCorrect = 0;
       let countWrong = 0;
-      let countAlmost = 0;
+      let countAlmostCorrect = 0;
       let countSkipped = 0;
       let totalScore = 0;
 
-      answers.forEach(async (answer) => {
-        let score = 0;
+      for (const answer of answers) {
         const question = test?.questions.find(
           (question) => question.id === answer.questionId
         );
+        if (!question) continue;
 
         const selectedOptions = answer.selectedOptions;
+        let score = 0;
 
         if (selectedOptions.length === 0) {
-          countSkipped = countSkipped + 1;
+          countSkipped++;
           await tx.answer.update({
             where: { id: answer.id },
             data: {
@@ -218,68 +219,60 @@ export const sendResponseTest = async (req: Request, res: Response) => {
               status: AnswerStatus.SKIPPED,
             },
           });
-          return;
+          continue;
         }
 
         selectedOptions.forEach((selectedOption) => {
-          if (!question) {
-            return;
-          }
-
           const correctOptions = question.options.filter(
             (option) => option.isCorrect
           );
+          const isCorrect = correctOptions.find(
+            (option) => option.id === selectedOption.id
+          );
 
           if (question.type === QuestionType.MULTIPLE) {
-            if (
-              correctOptions.find((option) => option.id === selectedOption.id)
-            ) {
+            if (isCorrect) {
               score += question.score / correctOptions.length;
             } else {
-              score -= score === 0 ? 0 : question.score / correctOptions.length;
+              score -= question.score / correctOptions.length;
             }
+            score = Math.max(0, score);
           }
 
           if (question.type === QuestionType.SINGLE) {
-            if (
-              correctOptions.find((option) => option.id === selectedOption.id)
-            ) {
-              score += question.score;
+            if (isCorrect) {
+              score = question.score;
             }
           }
         });
 
-        if (score === question?.score) {
-          countCorrect = countCorrect + 1;
-        } else if (score > 0) {
-          countAlmost = countAlmost + 1;
-        } else {
-          countWrong = countWrong + 1;
-        }
+        if (score === question.score) countCorrect++;
+        else if (score > 0) countAlmostCorrect++;
+        else countWrong++;
 
         totalScore += score;
 
         await tx.answer.update({
           where: { id: answer.id },
           data: {
-            score: score,
+            score,
             status:
-              score === question?.score
+              score === question.score
                 ? AnswerStatus.CORRECT
                 : score > 0
                 ? AnswerStatus.ALMOST_CORRECT
                 : AnswerStatus.INCORRECT,
           },
         });
-      });
+      }
 
       return await tx.testResult.create({
         data: {
           testSessionId: testSession.id,
-          countCorrect: countCorrect,
-          countWrong: countWrong,
-          countAlmostCorrect: countAlmost,
-          countSkipped: countSkipped,
+          countCorrect,
+          countWrong,
+          countAlmostCorrect,
+          countSkipped,
           score: totalScore,
           userId: testSession.userId,
         },
@@ -308,7 +301,9 @@ export const sendResponseTest = async (req: Request, res: Response) => {
 
     res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({
+      message: error instanceof Error ? error.message : 'Internal server error',
+    });
   }
 };
 

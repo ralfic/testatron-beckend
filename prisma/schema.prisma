@@ -13,7 +13,7 @@ model User {
     updatedAt DateTime @updatedAt
 
     email    String @unique
-    role     Role   @default(USER)
+    role     Role   @default(STUDENT)
     fullName String @map("full_name")
     password String
 
@@ -165,7 +165,8 @@ enum QuestionType {
 
 enum Role {
     ADMIN
-    USER
+    TEACHER
+    STUDENT
 }
 
 enum TestStatus {
