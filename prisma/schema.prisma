@@ -87,29 +87,6 @@ model Option {
     @@map("options")
 }
 
-model TestSession {
-    id        Int      @id @default(autoincrement())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    endedAt DateTime?
-    status  TestSessionStatus @default(IN_PROGRESS)
-
-    uuid String @unique @default(nanoid())
-
-    test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
-    testId Int  @map("test_id")
-    user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId Int?  @map("user_id")
-
-    guestName String?
-
-    answers Answer[]
-
-    testResults TestResult[]
-
-    @@map("test_sessions")
-}
-
 model Answer {
     id        Int      @id @default(autoincrement())
     createdAt DateTime @default(now())
@@ -119,7 +96,7 @@ model Answer {
     questionId    Int          @map("question_id")
     
     TestSession   TestSession? @relation(fields: [testSessionId], references: [id])
-    testSessionId Int?
+    testSessionId Int?          @map("test_session_id")
 
     score Int @default(0)
     status AnswerStatus @default(SKIPPED)
@@ -137,7 +114,7 @@ model TestResult {
     updatedAt DateTime @updatedAt
 
     testSession TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
-    testSessionId Int  @map("test_session_id")
+    testSessionId Int @unique @map("test_session_id")
     user          User? @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId        Int?  @map("user_id")
 
@@ -148,6 +125,29 @@ model TestResult {
     countSkipped   Int @map("count_skipped")
 
     @@map("test_results")
+}
+
+model TestSession {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    endedAt DateTime?
+    status  TestSessionStatus @default(IN_PROGRESS)
+
+    uuid String @unique @default(nanoid())
+
+    test   Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+    testId Int  @map("test_id")
+    user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId Int?  @map("user_id")
+    testResult TestResult?
+
+    guestName String? @map("guest_name")
+ 
+    answers Answer[]
+
+
+    @@map("test_sessions")
 }
 
 model UserSession {
@@ -161,6 +161,7 @@ model UserSession {
 enum QuestionType {
     MULTIPLE
     SINGLE
+    TEXT
 }
 
 enum Role {

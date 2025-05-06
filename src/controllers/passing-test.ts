@@ -210,18 +210,6 @@ export const sendResponseTest = async (req: Request, res: Response) => {
         const selectedOptions = answer.selectedOptions;
         let score = 0;
 
-        if (selectedOptions.length === 0) {
-          countSkipped++;
-          await tx.answer.update({
-            where: { id: answer.id },
-            data: {
-              score: 0,
-              status: AnswerStatus.SKIPPED,
-            },
-          });
-          continue;
-        }
-
         selectedOptions.forEach((selectedOption) => {
           const correctOptions = question.options.filter(
             (option) => option.isCorrect
@@ -241,6 +229,15 @@ export const sendResponseTest = async (req: Request, res: Response) => {
 
           if (question.type === QuestionType.SINGLE) {
             if (isCorrect) {
+              score = question.score;
+            }
+          }
+
+          if (question.type === QuestionType.TEXT) {
+            const correctAnswer = question.options.find(
+              (option) => option.text === selectedOption.text.trim()
+            )
+            if (correctAnswer) {
               score = question.score;
             }
           }
@@ -264,6 +261,10 @@ export const sendResponseTest = async (req: Request, res: Response) => {
                 : AnswerStatus.INCORRECT,
           },
         });
+      }
+
+      if (answers.length <= test?.questions.length) {
+        countSkipped = test?.questions.length - answers.length;
       }
 
       return await tx.testResult.create({
