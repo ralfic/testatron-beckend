@@ -23,7 +23,7 @@ const router = Router();
 
 router.post('/test', authMiddleware, createTest);
 
-router.get('/test/:testId', authMiddleware, testMiddleware(), getTestById);
+router.get('/test/:testId', authMiddleware, testMiddleware(true), getTestById);
 
 router.delete(
   '/test/:testId',

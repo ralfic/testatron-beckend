@@ -4,12 +4,13 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, TestStatus } from '@prisma/client';
 import passport from 'passport';
 import routes from './routes';
 import pg from 'pg';
 import pgSession from 'connect-pg-simple';
 import session from 'express-session';
+import cron from 'node-cron';
 import './strategies/local.strategy';
 
 dotenv.config();
@@ -73,6 +74,26 @@ async function main() {
     console.log(`Server running on port ${PORT}`);
   });
 }
+
+cron.schedule('* * * * *', async () => {
+  const now = new Date();
+
+  try {
+    await prisma.test.updateMany({
+      where: {
+        status: TestStatus.PUBLISHED,
+        expiresAt: {
+          lte: now,
+        },
+      },
+      data: {
+        status: TestStatus.EXPIRED,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
 
 main()
   .then(async () => {
